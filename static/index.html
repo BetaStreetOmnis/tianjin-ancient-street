@@ -13,7 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=ZCOOL+XiaoWei&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=6" />
   </head>
   <body>
     <div id="app">
@@ -330,10 +330,26 @@
             <p>
               支持多轮问答与导览推荐，连接大模型完成实时回复。
             </p>
-            <div class="avatar">
+            <div class="avatar" id="avatar">
               <div class="avatar-ring"></div>
-              <div class="avatar-core"></div>
               <div class="avatar-glow"></div>
+              <div class="avatar-figure">
+                <div class="avatar-head">
+                  <div class="avatar-hair"></div>
+                  <div class="avatar-face">
+                    <span class="avatar-eye left"></span>
+                    <span class="avatar-eye right"></span>
+                    <span class="avatar-cheek left"></span>
+                    <span class="avatar-cheek right"></span>
+                    <span class="avatar-mouth"></span>
+                  </div>
+                </div>
+                <div class="avatar-body">
+                  <div class="avatar-badge">导览员</div>
+                </div>
+                <div class="avatar-arm left"></div>
+                <div class="avatar-arm right"></div>
+              </div>
             </div>
             <div class="avatar-meta">
               <span>身份：津门故里导游</span>
@@ -403,6 +419,6 @@
         </div>
       </section>
     </div>
-    <script type="module" src="/static/app.js?v=3"></script>
+    <script type="module" src="/static/app.js?v=5"></script>
   </body>
 </html>

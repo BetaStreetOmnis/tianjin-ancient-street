@@ -561,8 +561,8 @@ ul {
 
 .avatar {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   margin: 20px auto;
   display: grid;
   place-items: center;
@@ -570,27 +570,125 @@ ul {
 
 .avatar-ring {
   position: absolute;
-  inset: 0;
+  inset: 8px;
   border-radius: 50%;
   border: 2px solid rgba(214, 165, 90, 0.8);
   animation: rotate 12s linear infinite;
 }
 
-.avatar-core {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #f7d8a6, #b5633a);
-  box-shadow: 0 20px 40px -26px var(--shadow);
-}
-
 .avatar-glow {
   position: absolute;
-  width: 150px;
-  height: 150px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(245, 199, 130, 0.5), transparent 70%);
   animation: pulse 2.6s ease-in-out infinite;
+}
+
+.avatar-figure {
+  position: relative;
+  width: 120px;
+  height: 160px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  animation: float 4s ease-in-out infinite;
+}
+
+.avatar-head {
+  position: absolute;
+  top: 6px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #f9ddb5, #c17045);
+  box-shadow: 0 16px 30px -24px var(--shadow);
+}
+
+.avatar-face {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  width: 46px;
+  height: 26px;
+  transform: translateX(-50%);
+}
+
+.avatar-eye {
+  position: absolute;
+  top: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2b1a12;
+  animation: blink 4.8s infinite;
+}
+
+.avatar-eye.left {
+  left: 6px;
+}
+
+.avatar-eye.right {
+  right: 6px;
+}
+
+.avatar-mouth {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 18px;
+  height: 5px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: #5a2d1d;
+  transform-origin: center;
+}
+
+.avatar-body {
+  position: absolute;
+  top: 78px;
+  width: 88px;
+  height: 70px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #b05d3d, #7c3c2c);
+  box-shadow: 0 18px 30px -26px var(--shadow);
+}
+
+.avatar-arm {
+  position: absolute;
+  top: 86px;
+  width: 16px;
+  height: 58px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #c57a4d, #8b4b32);
+}
+
+.avatar-arm.left {
+  left: -8px;
+  transform: rotate(10deg);
+}
+
+.avatar-arm.right {
+  right: -8px;
+  transform: rotate(-10deg);
+  transform-origin: top center;
+}
+
+.avatar.is-speaking .avatar-mouth {
+  animation: talk 0.22s ease-in-out infinite;
+}
+
+.avatar.is-speaking .avatar-arm.right {
+  animation: wave 0.9s ease-in-out infinite;
+}
+
+.avatar.is-speaking .avatar-ring {
+  animation-duration: 6s;
+}
+
+.avatar.is-offline {
+  opacity: 0.6;
+  filter: grayscale(0.25);
 }
 
 .avatar-meta {
@@ -833,6 +931,47 @@ input[type="file"] {
   50% {
     transform: scale(1.08);
     opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(-30deg);
+  }
+}
+
+@keyframes talk {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) scaleY(1.6);
   }
 }
 

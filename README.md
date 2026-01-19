@@ -21,6 +21,10 @@ uvicorn main:app --reload
 
 Open `http://127.0.0.1:8000` in your browser.
 
+## Video Library
+
+Place product videos in `static/media/robot-videos/` and refresh the page to display them.
+
 ## Model Config
 
 Set environment variables before starting to override the LLM endpoint:

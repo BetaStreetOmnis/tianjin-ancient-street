@@ -12,3 +12,24 @@ INFO:     127.0.0.1:64790 - "GET /api/landmarks HTTP/1.1" 200 OK
 INFO:     127.0.0.1:64790 - "GET /favicon.ico HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:64789 - "HEAD /static/media/guwenhua.mp4 HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:64841 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51017 - "HEAD /static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51150 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51150 - "GET /static/styles.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51151 - "GET /static/app.js?v=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51151 - "GET /static/vendor/three.module.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51150 - "GET /static/vendor/OrbitControls.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:51150 - "GET /api/landmarks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51150 - "GET /static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51150 - "GET /static/media/robot-videos/dunhuang-star-mirror-ai-photo-booth.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51150 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52969 - "GET /static/media/robot-videos/dunhuang-star-mirror-ai-photo-booth.mp4 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:52969 - "GET /static/media/robot-videos/digital-human-hologram-2.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52969 - "GET /static/media/robot-videos/greeter-robot-xiaobao.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53001 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53389 - "GET /static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53449 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53450 - "GET /static/app.js?v=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53449 - "GET /static/styles.css?v=5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53449 - "GET /static/vendor/OrbitControls.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53450 - "GET /static/vendor/three.module.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:53450 - "GET /api/landmarks HTTP/1.1" 200 OK

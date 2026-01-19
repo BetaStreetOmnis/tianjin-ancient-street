@@ -18,6 +18,7 @@ const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatLog = document.getElementById("chat-log");
 const chatStatus = document.getElementById("chat-status");
+const avatar = document.getElementById("avatar");
 const photoInput = document.getElementById("photo-upload");
 const photoTheme = document.getElementById("photo-theme");
 const photoButton = document.getElementById("photo-generate");
@@ -28,6 +29,7 @@ const presentationState = {
   messages: [],
   photoImage: null,
 };
+let speakingTimeout = null;
 
 const quality = getQualitySettings();
 
@@ -1325,6 +1327,7 @@ function setupChat() {
       thinking.textContent = reply || "暂时无法生成回答。";
       presentationState.messages.push({ role: "assistant", content: reply });
       setChatStatus("online");
+      triggerAvatarSpeak();
     } catch (error) {
       thinking.textContent = "当前无法连接模型，请稍后再试。";
       setChatStatus("offline");
@@ -1357,6 +1360,7 @@ function setChatStatus(state) {
     return;
   }
   chatStatus.classList.remove("is-busy", "is-offline");
+  setAvatarState(state);
   if (state === "busy") {
     chatStatus.textContent = "思考中";
     chatStatus.classList.add("is-busy");
@@ -1366,6 +1370,27 @@ function setChatStatus(state) {
   } else {
     chatStatus.textContent = "在线";
   }
+}
+
+function setAvatarState(state) {
+  if (!avatar) {
+    return;
+  }
+  avatar.classList.toggle("is-speaking", state === "busy");
+  avatar.classList.toggle("is-offline", state === "offline");
+}
+
+function triggerAvatarSpeak(duration = 1200) {
+  if (!avatar) {
+    return;
+  }
+  avatar.classList.add("is-speaking");
+  if (speakingTimeout) {
+    window.clearTimeout(speakingTimeout);
+  }
+  speakingTimeout = window.setTimeout(() => {
+    avatar.classList.remove("is-speaking");
+  }, duration);
 }
 
 async function requestChatReply() {

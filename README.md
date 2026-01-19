@@ -34,3 +34,19 @@ export MODEL_API_URL="http://218.67.242.10:41000/v1/chat/completions"
 export MODEL_API_TOKEN="abc@123"
 export MODEL_NAME="Qwen3-VL-32B-Instruct"
 ```
+
+## Tongyi Photo Generation
+
+The photo stage calls Tongyi (DashScope) image generation when a key is set:
+
+```bash
+export DASHSCOPE_API_KEY="your_dashscope_api_key"
+export TONGYI_IMAGE_MODEL="wanx-v1"
+export TONGYI_IMAGE_SIZE="1024*1024"
+```
+
+Optional image-to-image mode (use the uploaded photo as input):
+
+```bash
+export TONGYI_IMAGE_MODE="image2image"
+```

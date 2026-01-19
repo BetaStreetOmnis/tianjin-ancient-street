@@ -4,8 +4,8 @@ import { OrbitControls } from "./vendor/OrbitControls.js";
 const container = document.getElementById("scene");
 const tooltip = document.getElementById("tooltip");
 const infoPanel = document.getElementById("info-panel");
-const infoName = infoPanel.querySelector(".info-name");
-const infoDesc = infoPanel.querySelector(".info-desc");
+const infoName = infoPanel ? infoPanel.querySelector(".info-name") : null;
+const infoDesc = infoPanel ? infoPanel.querySelector(".info-desc") : null;
 const loading = document.getElementById("loading");
 const scrollButtons = document.querySelectorAll("[data-scroll]");
 const videoInput = document.getElementById("video-upload");
@@ -14,59 +14,84 @@ const videoOverlay = document.getElementById("video-overlay");
 const videoShell = document.getElementById("video-shell");
 const videoTitle = document.getElementById("video-title");
 const videoItems = document.querySelectorAll(".video-item");
+const videoFilters = document.querySelectorAll(".video-filter");
+const videoList = document.querySelector(".video-list");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatLog = document.getElementById("chat-log");
 const chatStatus = document.getElementById("chat-status");
 const avatar = document.getElementById("avatar");
+const chatImageInput = document.getElementById("chat-image");
+const chatImagePreview = document.getElementById("chat-image-preview");
+const chatImagePlaceholder = document.getElementById("chat-image-placeholder");
+const chatImageThumb = document.getElementById("chat-image-thumb");
+const chatImageName = document.getElementById("chat-image-name");
+const chatImageClear = document.getElementById("chat-image-clear");
 const photoInput = document.getElementById("photo-upload");
 const photoTheme = document.getElementById("photo-theme");
 const photoButton = document.getElementById("photo-generate");
 const photoCanvas = document.getElementById("photo-canvas");
 const photoPlaceholder = document.getElementById("photo-placeholder");
+const photoVideoElement = document.getElementById("photo-video");
+const photoVideoTitle = document.getElementById("photo-video-title");
+const photoVideoItems = document.querySelectorAll(".photo-video-item");
 
 const presentationState = {
   messages: [],
   photoImage: null,
+  pendingImage: null,
 };
 let speakingTimeout = null;
 
+installGlobalErrorHandler();
+
+const liteMode = (() => {
+  if (typeof URLSearchParams === "undefined") {
+    return true;
+  }
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("lite")) {
+    return true;
+  }
+  const value = params.get("lite");
+  return value !== "0" && value !== "false";
+})();
+
 const quality = getQualitySettings();
+if (liteMode) {
+  quality.level = "lite";
+  quality.antialias = false;
+  quality.pixelRatio = Math.min(window.devicePixelRatio || 1, 1);
+  quality.shadows = false;
+  quality.shadowMapType = THREE.BasicShadowMap;
+  quality.shadowMapSize = 256;
+  quality.shadowAutoUpdate = false;
+  quality.groundSegments = 20;
+  quality.streetSegments = 2;
+  quality.riverSegments = 4;
+  quality.treeStep = 40;
+  quality.lanternStep = 40;
+  quality.lanternLights = false;
+  quality.animateLanterns = false;
+  quality.animateWater = false;
+  quality.maxFps = 30;
+  quality.pauseWhenHidden = true;
+  quality.powerPreference = "low-power";
+}
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color("#f1e6d3");
-scene.fog = new THREE.Fog("#e9dcc6", 50, 180);
+if (!container) {
+  showLoadingError("未找到 3D 场景容器，请刷新重试。");
+  throw new Error("Scene container not found.");
+}
 
-const camera = new THREE.PerspectiveCamera(
-  45,
-  container.clientWidth / container.clientHeight,
-  0.1,
-  260
-);
-camera.position.set(48, 50, 70);
-
-const renderer = new THREE.WebGLRenderer({
-  antialias: quality.antialias,
-  powerPreference: quality.powerPreference,
-});
-renderer.setPixelRatio(quality.pixelRatio);
-renderer.setSize(container.clientWidth, container.clientHeight);
-renderer.shadowMap.enabled = quality.shadows;
-renderer.shadowMap.type = quality.shadowMapType;
-renderer.shadowMap.autoUpdate = quality.shadowAutoUpdate;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-container.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.07;
-controls.enablePan = true;
-controls.minDistance = 28;
-controls.maxDistance = 150;
-controls.minPolarAngle = Math.PI / 6;
-controls.maxPolarAngle = Math.PI / 2.1;
+let scene = null;
+let camera = null;
+let renderer = null;
+let controls = null;
+let world = null;
+let river = null;
+let lanterns = { group: null, bulbs: [] };
+let threeReady = false;
 
 const palette = {
   earth: "#d9c4a1",
@@ -80,20 +105,65 @@ const palette = {
   stage: "#a65a3b",
 };
 
-const world = new THREE.Group();
-scene.add(world);
+try {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color("#f1e6d3");
+  scene.fog = new THREE.Fog("#e9dcc6", 50, 180);
+
+  const initialWidth = Math.max(container.clientWidth, 1);
+  const initialHeight = Math.max(container.clientHeight, 1);
+
+  camera = new THREE.PerspectiveCamera(45, initialWidth / initialHeight, 0.1, 260);
+  camera.position.set(48, 50, 70);
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: quality.antialias,
+    powerPreference: quality.powerPreference,
+    alpha: false,
+    stencil: false,
+    precision: liteMode ? "lowp" : "highp",
+  });
+  renderer.setPixelRatio(quality.pixelRatio);
+  renderer.setSize(initialWidth, initialHeight);
+  renderer.shadowMap.enabled = quality.shadows;
+  renderer.shadowMap.type = quality.shadowMapType;
+  renderer.shadowMap.autoUpdate = quality.shadowAutoUpdate;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  container.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.enablePan = true;
+  controls.minDistance = 28;
+  controls.maxDistance = 150;
+  controls.minPolarAngle = Math.PI / 6;
+  controls.maxPolarAngle = Math.PI / 2.1;
+
+  world = new THREE.Group();
+  scene.add(world);
 
 world.add(createLights());
 world.add(createGround());
 world.add(createStreet());
-const river = createRiver();
-world.add(river);
-world.add(createBridge());
 world.add(createBuildings());
-world.add(createTrees());
 
-const lanterns = createLanterns();
-world.add(lanterns.group);
+if (!liteMode) {
+  river = createRiver();
+  world.add(river);
+  world.add(createBridge());
+  world.add(createTrees());
+  lanterns = createLanterns();
+  world.add(lanterns.group);
+}
+
+  threeReady = true;
+} catch (error) {
+  console.error("3D init failed:", error);
+  renderFallbackMap("3D 无法加载，已切换为平面示意。");
+}
 
 const markers = [];
 const markerMap = new Map();
@@ -108,6 +178,9 @@ let lastFrameTime = 0;
 let isSceneVisible = true;
 let isPageVisible = true;
 let videoObjectUrl = null;
+let hasRendered = false;
+let sceneResizeObserver = null;
+let pendingResizeFrame = null;
 
 const fallbackLandmarks = [
   {
@@ -166,14 +239,29 @@ const fallbackLandmarks = [
   },
 ];
 
-initPresentation();
-init().catch((error) => {
-  console.error(error);
-  loading.textContent = "场景加载失败。";
-});
+try {
+  initPresentation();
+} catch (error) {
+  console.warn("Presentation init failed:", error);
+}
+if (threeReady) {
+  init().catch((error) => {
+    console.error(error);
+    showLoadingError("场景加载失败，请刷新或更换浏览器。");
+  });
+} else {
+  hideLoading();
+}
 
 function createLights() {
   const group = new THREE.Group();
+  if (liteMode) {
+    const hemi = new THREE.HemisphereLight(0xfdf5e6, 0x4c3a2f, 0.9);
+    const dir = new THREE.DirectionalLight(0xfff0d0, 0.6);
+    dir.position.set(40, 60, 20);
+    group.add(hemi, dir);
+    return group;
+  }
   const hemi = new THREE.HemisphereLight(0xfdf5e6, 0x4c3a2f, 0.9);
   const dir = new THREE.DirectionalLight(0xfff0d0, 1.05);
   dir.position.set(40, 60, 20);
@@ -196,6 +284,19 @@ function createLights() {
 }
 
 function createGround() {
+  if (liteMode) {
+    const geometry = new THREE.PlaneGeometry(160, 160, 1, 1);
+    geometry.rotateX(-Math.PI / 2);
+    const material = new THREE.MeshStandardMaterial({
+      color: palette.earth,
+      roughness: 0.95,
+      metalness: 0.02,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.receiveShadow = true;
+    mesh.position.y = -1;
+    return mesh;
+  }
   const geometry = new THREE.PlaneGeometry(
     160,
     160,
@@ -257,26 +358,40 @@ function createStreet() {
   const geometry = new THREE.ShapeGeometry(shape, quality.streetSegments);
   geometry.rotateX(-Math.PI / 2);
 
-  const pavingTexture = createPavingTexture();
-  const material = new THREE.MeshStandardMaterial({
-    map: pavingTexture,
-    roughness: 0.8,
-    metalness: 0.05,
-  });
+  let material = null;
+  if (liteMode) {
+    material = new THREE.MeshStandardMaterial({
+      color: "#d2b894",
+      roughness: 0.9,
+      metalness: 0.02,
+    });
+  } else {
+    const pavingTexture = createPavingTexture();
+    material = new THREE.MeshStandardMaterial({
+      map: pavingTexture,
+      roughness: 0.8,
+      metalness: 0.05,
+    });
+  }
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;
   mesh.position.y = 0.05;
 
-  const edgeMaterial = new THREE.LineBasicMaterial({
-    color: "#6b3b2d",
-    transparent: true,
-    opacity: 0.5,
-  });
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial);
-  edges.position.y = 0.06;
-
   const group = new THREE.Group();
-  group.add(mesh, edges);
+  group.add(mesh);
+  if (!liteMode) {
+    const edgeMaterial = new THREE.LineBasicMaterial({
+      color: "#6b3b2d",
+      transparent: true,
+      opacity: 0.5,
+    });
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geometry),
+      edgeMaterial
+    );
+    edges.position.y = 0.06;
+    group.add(edges);
+  }
   return group;
 }
 
@@ -365,11 +480,11 @@ function createBuildings() {
     roughness: 0.65,
   });
 
-  let index = 0;
-  for (let z = -42; z <= 42; z += 12) {
+  const maxZ = liteMode ? 30 : 42;
+  const step = liteMode ? 24 : 12;
+  for (let z = -maxZ; z <= maxZ; z += step) {
     addCluster(-18, z, -1);
     addCluster(18, z, 1);
-    index += 1;
   }
 
   function addCluster(baseX, z, side) {
@@ -388,6 +503,10 @@ function createBuildings() {
       colors[colorIndex]
     );
     group.add(main);
+
+    if (liteMode) {
+      return;
+    }
 
     const annex = createBuilding(
       baseX + side * (width * 0.7),
@@ -431,6 +550,9 @@ function createRoof(width, depth, height, material) {
 
 function createTrees() {
   const group = new THREE.Group();
+  if (liteMode) {
+    return group;
+  }
   const trunkMaterial = new THREE.MeshStandardMaterial({
     color: "#6a4a35",
     roughness: 0.8,
@@ -492,27 +614,52 @@ function createLanterns() {
 }
 
 async function init() {
-  await loadLandmarks();
+  const landmarksPromise = loadLandmarks().catch((error) => {
+    console.warn("Failed to load landmarks.", error);
+  });
 
   renderer.domElement.style.touchAction = "none";
   renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("pointerleave", onPointerLeave);
   renderer.domElement.addEventListener("click", onClick);
   window.addEventListener("resize", onResize);
-  setupVisibilityTracking();
-  setupVideoPlayer();
+  safeInvoke(setupSceneResizer, "scene resize");
+  window.addEventListener("pageshow", () => {
+    onResize();
+    renderOnce();
+  });
+  safeInvoke(setupVisibilityTracking, "visibility tracking");
+  safeInvoke(setupPhotoGenerator, "photo generator");
 
-  loading.classList.add("hidden");
+  onResize();
+  requestAnimationFrame(onResize);
+
+  hideLoading();
+  renderOnce();
   if (quality.shadows && !quality.shadowAutoUpdate) {
     renderer.shadowMap.needsUpdate = true;
   }
   animate();
+
+  await landmarksPromise;
+  if (quality.shadows && !quality.shadowAutoUpdate) {
+    renderer.shadowMap.needsUpdate = true;
+  }
 }
 
 async function loadLandmarks() {
   let landmarks = fallbackLandmarks;
+  let timeoutId = null;
+  let controller = null;
   try {
-    const response = await fetch("/api/landmarks");
+    if (typeof AbortController !== "undefined") {
+      controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 2200);
+    }
+    const response = await fetch(
+      "/api/landmarks",
+      controller ? { signal: controller.signal } : undefined
+    );
     if (response.ok) {
       const data = await response.json();
       if (data && Array.isArray(data.landmarks)) {
@@ -521,12 +668,18 @@ async function loadLandmarks() {
     }
   } catch (error) {
     console.warn("Using fallback landmarks.", error);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
   }
 
   landmarks.forEach((landmark) => {
-    const structure = createLandmarkStructure(landmark);
-    if (structure) {
-      world.add(structure);
+    if (!liteMode) {
+      const structure = createLandmarkStructure(landmark);
+      if (structure) {
+        world.add(structure);
+      }
     }
     const marker = createMarker(landmark);
     markers.push(marker);
@@ -681,14 +834,20 @@ function createMarker(landmark) {
     roughness: 0.35,
   });
 
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.1, 0.4, 16), baseMaterial);
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.8, 1.1, 0.4, liteMode ? 8 : 16),
+    baseMaterial
+  );
   base.position.set(0, 0.2, 0);
   const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12, 0.12, landmark.height || 5, 8),
+    new THREE.CylinderGeometry(0.12, 0.12, landmark.height || 5, liteMode ? 6 : 8),
     poleMaterial
   );
   pole.position.set(0, (landmark.height || 5) / 2 + 0.3, 0);
-  const beacon = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.6, 16), beaconMaterial);
+  const beacon = new THREE.Mesh(
+    new THREE.ConeGeometry(0.6, 1.6, liteMode ? 8 : 16),
+    beaconMaterial
+  );
   beacon.position.set(0, (landmark.height || 5) + 1.2, 0);
 
   group.add(base, pole, beacon);
@@ -863,6 +1022,9 @@ function setMarkerHighlight(marker, active) {
 }
 
 function updateInfoPanel(marker) {
+  if (!infoName || !infoDesc) {
+    return;
+  }
   if (!marker) {
     infoName.textContent = "悬停或点击地标";
     infoDesc.textContent = "查看对应位置的文化与服务说明。";
@@ -880,11 +1042,33 @@ function focusOnMarker(marker) {
 }
 
 function onResize() {
-  const { clientWidth, clientHeight } = container;
-  camera.aspect = clientWidth / clientHeight;
+  if (!camera || !renderer) {
+    return;
+  }
+  const rect = container.getBoundingClientRect();
+  let width = Math.round(rect.width);
+  let height = Math.round(rect.height);
+  if (!width || !height) {
+    const parent = container.parentElement;
+    if (parent) {
+      const parentRect = parent.getBoundingClientRect();
+      width = Math.round(parentRect.width);
+      height = Math.round(parentRect.height);
+    }
+  }
+  if (!width || !height) {
+    return;
+  }
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(quality.pixelRatio);
-  renderer.setSize(clientWidth, clientHeight);
+  renderer.setSize(width, height);
+  if (
+    !hasRendered ||
+    (quality.pauseWhenHidden && (!isSceneVisible || !isPageVisible))
+  ) {
+    renderOnce();
+  }
 }
 
 function animate() {
@@ -898,6 +1082,10 @@ function animate() {
     lastFrameTime = now;
   }
   if (quality.pauseWhenHidden && (!isSceneVisible || !isPageVisible)) {
+    if (!hasRendered) {
+      renderer.render(scene, camera);
+      hasRendered = true;
+    }
     return;
   }
 
@@ -907,6 +1095,7 @@ function animate() {
   updateFocus();
 
   renderer.render(scene, camera);
+  hasRendered = true;
 }
 
 function updateWater() {
@@ -925,13 +1114,14 @@ function updateLanterns() {
     return;
   }
   const time = performance.now() * 0.002;
-  lanterns.bulbs.forEach((bulb, index) => {
+  for (let i = 0; i < lanterns.bulbs.length; i += 1) {
+    const bulb = lanterns.bulbs[i];
     const flicker = 0.2 + Math.sin(time + bulb.seed) * 0.15;
     bulb.mesh.material.emissiveIntensity = 0.6 + flicker;
     if (bulb.light) {
       bulb.light.intensity = 0.35 + flicker;
     }
-  });
+  }
 }
 
 function updateFocus() {
@@ -971,6 +1161,38 @@ function setupVisibilityTracking() {
   );
 
   observer.observe(container);
+}
+
+function setupSceneResizer() {
+  const target = container.parentElement || container;
+
+  const scheduleResize = () => {
+    if (pendingResizeFrame) {
+      cancelAnimationFrame(pendingResizeFrame);
+    }
+    pendingResizeFrame = requestAnimationFrame(() => {
+      pendingResizeFrame = null;
+      onResize();
+    });
+  };
+
+  scheduleResize();
+  window.addEventListener("load", scheduleResize);
+
+  if ("ResizeObserver" in window) {
+    sceneResizeObserver = new ResizeObserver(scheduleResize);
+    sceneResizeObserver.observe(target);
+    return;
+  }
+
+  let attempts = 0;
+  const intervalId = window.setInterval(() => {
+    attempts += 1;
+    scheduleResize();
+    if (attempts >= 8) {
+      window.clearInterval(intervalId);
+    }
+  }, 240);
 }
 
 function setupVideoPlayer() {
@@ -1058,9 +1280,123 @@ function setupVideoPlayer() {
   }
 }
 
+function setupPhotoGenerator() {
+  const upload = document.getElementById("photo-upload");
+  const themeSelect = document.getElementById("photo-theme");
+  const button = document.getElementById("photo-generate");
+  const canvas = document.getElementById("photo-canvas");
+  const placeholder = document.getElementById("photo-placeholder");
+
+  if (!button || !canvas) {
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    return;
+  }
+
+  let selectedFile = null;
+  let previewUrl = null;
+
+  const setStatus = (text) => {
+    if (!placeholder) {
+      return;
+    }
+    placeholder.textContent = text;
+    placeholder.style.opacity = "1";
+    placeholder.style.pointerEvents = "auto";
+  };
+
+  const clearStatus = () => {
+    if (!placeholder) {
+      return;
+    }
+    placeholder.style.opacity = "0";
+    placeholder.style.pointerEvents = "none";
+  };
+
+  const drawImageToCanvas = (image) => {
+    const { width, height } = canvas;
+    ctx.clearRect(0, 0, width, height);
+    const scale = Math.min(width / image.width, height / image.height);
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
+    const offsetX = (width - drawWidth) / 2;
+    const offsetY = (height - drawHeight) / 2;
+    ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+  };
+
+  const renderFromUrl = (url) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      drawImageToCanvas(image);
+      clearStatus();
+    };
+    image.onerror = () => {
+      setStatus("生成失败，请重试或更换图片");
+    };
+    image.src = url;
+  };
+
+  if (upload) {
+    upload.addEventListener("change", () => {
+      const file = upload.files && upload.files[0];
+      if (!file) {
+        return;
+      }
+      selectedFile = file;
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      previewUrl = URL.createObjectURL(file);
+      renderFromUrl(previewUrl);
+    });
+  }
+
+  button.addEventListener("click", async () => {
+    const formData = new FormData();
+    if (selectedFile) {
+      formData.append("photo", selectedFile);
+    }
+    formData.append("theme", themeSelect ? themeSelect.value : "classic");
+
+    button.disabled = true;
+    setStatus("通义生成中，请稍候...");
+
+    try {
+      const response = await fetch("/api/photo/generate", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const message = errorData.detail || "生成失败，请稍后再试";
+        setStatus(message);
+        return;
+      }
+      const data = await response.json();
+      if (data.image_url) {
+        renderFromUrl(`${data.image_url}?t=${Date.now()}`);
+      } else {
+        setStatus("未获取到生成结果");
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus("生成失败，请检查网络或模型配置");
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
 function getQualitySettings() {
-  const params = new URLSearchParams(window.location.search);
-  const forced = params.get("quality");
+  let params = null;
+  if (typeof URLSearchParams !== "undefined") {
+    params = new URLSearchParams(window.location.search);
+  }
+  const forced = params ? params.get("quality") : null;
   const prefersReducedMotion =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const memory = navigator.deviceMemory || 8;
@@ -1139,50 +1475,171 @@ function getQualitySettings() {
   return { level, ...presets[level] };
 }
 
-function initPresentation() {
-  setupScrollButtons();
-  setupSlideObserver();
-  setupVideoList();
-  setupVideoUpload();
-  setupChat();
-  setupPhotoComposer();
-}
-
-function setupScrollButtons() {
-  if (!scrollButtons || scrollButtons.length === 0) {
+function safeInvoke(fn, label) {
+  if (typeof fn !== "function") {
     return;
   }
-  scrollButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const target = button.getAttribute("data-scroll");
-      if (!target) {
-        return;
-      }
-      const el = document.querySelector(target);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
+  try {
+    fn();
+  } catch (error) {
+    console.warn("Init failed:", label, error);
+  }
+}
+
+function showLoadingError(message) {
+  if (!loading) {
+    return;
+  }
+  if (loading.classList) {
+    loading.classList.remove("hidden");
+  } else {
+    loading.className = loading.className.replace(/\bhidden\b/g, "").trim();
+  }
+  loading.innerHTML = `<div class=\"spinner\"></div><div>${message}</div>`;
+}
+
+function installGlobalErrorHandler() {
+  window.addEventListener("error", (event) => {
+    const message = event && event.message ? event.message : "未知错误";
+    showLoadingError(`场景加载失败：${message}`);
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event && event.reason ? event.reason : null;
+    const message = reason && reason.message ? reason.message : "未知错误";
+    showLoadingError(`场景加载失败：${message}`);
   });
 }
 
-function setupSlideObserver() {
-  const slides = document.querySelectorAll(".slide");
-  if (!slides.length || !window.IntersectionObserver) {
-    slides.forEach((slide) => slide.classList.add("is-visible"));
+function hideLoading() {
+  if (!loading) {
     return;
   }
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-        }
-      });
-    },
-    { threshold: 0.18 }
-  );
-  slides.forEach((slide) => observer.observe(slide));
+  if (loading.classList) {
+    loading.classList.add("hidden");
+    if (typeof window !== "undefined") {
+      window.__appReady = true;
+    }
+    return;
+  }
+  if (loading.className.indexOf("hidden") === -1) {
+    loading.className += " hidden";
+  }
+  if (typeof window !== "undefined") {
+    window.__appReady = true;
+  }
+}
+
+function renderOnce() {
+  if (!renderer || !scene || !camera) {
+    return;
+  }
+  renderer.render(scene, camera);
+  hasRendered = true;
+}
+
+function renderFallbackMap(message) {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  const wrapper = document.createElement("div");
+  wrapper.className = "scene-fallback";
+
+  const header = document.createElement("div");
+  header.className = "fallback-header";
+  header.innerHTML = `<strong>街区平面示意</strong><span>${
+    message || "已启用超简模式"
+  }</span>`;
+
+  const map = document.createElement("div");
+  map.className = "fallback-map";
+  map.innerHTML = `
+    <span class="fallback-dot gate" style="left:50%; top:18%;">牌坊</span>
+    <span class="fallback-dot craft" style="left:32%; top:38%;">民俗馆</span>
+    <span class="fallback-dot temple" style="left:30%; top:52%;">天后宫</span>
+    <span class="fallback-dot market" style="left:66%; top:50%;">津味街</span>
+    <span class="fallback-dot stage" style="left:64%; top:66%;">曲艺台</span>
+    <span class="fallback-dot tower" style="left:52%; top:82%;">鼓楼</span>
+  `;
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(map);
+  container.appendChild(wrapper);
+  hideLoading();
+}
+
+function initPresentation() {
+  setupPanelTabs();
+  setupVideoList();
+  setupVideoFilters();
+  setupVideoUpload();
+  setupScenarioVideoLists();
+  setupChat();
+  setupPhotoComposer();
+  setupPhotoVideoList();
+}
+
+function setupPanelTabs() {
+  const tabs = document.querySelectorAll(".nav-item[data-panel]");
+  const pages = document.querySelectorAll(".panel-page");
+  const dashboard = document.querySelector(".dashboard");
+  if (!tabs.length || !pages.length) {
+    return;
+  }
+
+  const setActive = (panel) => {
+    for (let i = 0; i < tabs.length; i += 1) {
+      const tab = tabs[i];
+      const isActive = tab.getAttribute("data-panel") === panel;
+      if (isActive) {
+        tab.classList.add("is-active");
+      } else {
+        tab.classList.remove("is-active");
+      }
+    }
+    for (let i = 0; i < pages.length; i += 1) {
+      const page = pages[i];
+      const isActive = page.getAttribute("data-panel") === panel;
+      if (isActive) {
+        page.classList.add("is-active");
+      } else {
+        page.classList.remove("is-active");
+      }
+    }
+
+    const isStreet = panel === "street";
+    if (dashboard) {
+      if (isStreet) {
+        dashboard.classList.add("is-map");
+        dashboard.classList.remove("is-panel");
+      } else {
+        dashboard.classList.add("is-panel");
+        dashboard.classList.remove("is-map");
+      }
+    }
+    isSceneVisible = isStreet;
+    if (typeof onResize === "function" && isStreet) {
+      requestAnimationFrame(() => onResize());
+    }
+  };
+
+  for (let i = 0; i < tabs.length; i += 1) {
+    const tab = tabs[i];
+    tab.addEventListener("click", () => {
+      const panel = tab.getAttribute("data-panel");
+      if (panel) {
+        setActive(panel);
+      }
+    });
+  }
+
+  const defaultTab = document.querySelector(".nav-item.is-active") || tabs[0];
+  if (defaultTab) {
+    const panel = defaultTab.getAttribute("data-panel");
+    if (panel) {
+      setActive(panel);
+    }
+  }
 }
 
 function setupVideoList() {
@@ -1198,14 +1655,15 @@ function setupVideoList() {
     return;
   }
 
-  videoItems.forEach((item) => {
+  for (let i = 0; i < videoItems.length; i += 1) {
+    const item = videoItems[i];
     item.addEventListener("click", () => {
       const src = item.getAttribute("data-video-src");
       const title = item.getAttribute("data-title") || item.textContent.trim();
       setActiveVideoItem(item);
       setVideoSource(src, title, true);
     });
-  });
+  }
 
   const defaultItem =
     document.querySelector(".video-item.is-active") || videoItems[0];
@@ -1214,6 +1672,62 @@ function setupVideoList() {
     const title = defaultItem.getAttribute("data-title") || defaultItem.textContent.trim();
     setActiveVideoItem(defaultItem);
     setVideoSource(src, title, false);
+  }
+}
+
+function setupVideoFilters() {
+  if (!videoFilters || videoFilters.length === 0 || !videoItems || !videoList) {
+    return;
+  }
+
+  const applyFilter = (filter) => {
+    videoList.dataset.filter = filter;
+    let firstVisible = null;
+    for (let i = 0; i < videoItems.length; i += 1) {
+      const item = videoItems[i];
+      const type = item.getAttribute("data-video-type") || "";
+      const match = type === filter;
+      item.setAttribute("aria-hidden", match ? "false" : "true");
+      if (match && !firstVisible) {
+        firstVisible = item;
+      }
+    }
+
+    const activeItem = document.querySelector(".video-item.is-active");
+    if (firstVisible && (!activeItem || activeItem.getAttribute("aria-hidden") === "true")) {
+      const src = firstVisible.getAttribute("data-video-src");
+      const title =
+        firstVisible.getAttribute("data-title") || firstVisible.textContent.trim();
+      setActiveVideoItem(firstVisible);
+      setVideoSource(src, title, false);
+    }
+  };
+
+  for (let i = 0; i < videoFilters.length; i += 1) {
+    const filterButton = videoFilters[i];
+    filterButton.addEventListener("click", () => {
+      const filter = filterButton.getAttribute("data-filter");
+      if (!filter) {
+        return;
+      }
+      for (let j = 0; j < videoFilters.length; j += 1) {
+        if (videoFilters[j] === filterButton) {
+          videoFilters[j].classList.add("is-active");
+        } else {
+          videoFilters[j].classList.remove("is-active");
+        }
+      }
+      applyFilter(filter);
+    });
+  }
+
+  const defaultFilter =
+    document.querySelector(".video-filter.is-active") || videoFilters[0];
+  if (defaultFilter) {
+    const filter = defaultFilter.getAttribute("data-filter");
+    if (filter) {
+      applyFilter(filter);
+    }
   }
 }
 
@@ -1273,6 +1787,90 @@ function setupVideoUpload() {
   });
 }
 
+function setupScenarioVideoLists() {
+  const cards = document.querySelectorAll(".scenario-card");
+  if (!cards || cards.length === 0) {
+    return;
+  }
+
+  for (let i = 0; i < cards.length; i += 1) {
+    const card = cards[i];
+    const videoId = card.getAttribute("data-video-target");
+    const titleId = card.getAttribute("data-title-target");
+    const video = videoId ? document.getElementById(videoId) : null;
+    const title = titleId ? document.getElementById(titleId) : null;
+    if (!video) {
+      continue;
+    }
+
+    const isEmbed = video.tagName === "IFRAME";
+    const items = card.querySelectorAll(".scenario-item");
+
+    const setActiveItem = (activeItem) => {
+      if (!items || items.length === 0) {
+        return;
+      }
+      for (let j = 0; j < items.length; j += 1) {
+        const item = items[j];
+        if (item === activeItem) {
+          item.classList.add("is-active");
+        } else {
+          item.classList.remove("is-active");
+        }
+      }
+    };
+
+    const setSource = (src, label, shouldPlay) => {
+      if (!src) {
+        return;
+      }
+      if (title && label) {
+        title.textContent = label;
+      }
+      if (isEmbed) {
+        video.src = src;
+        return;
+      }
+      video.src = src;
+      video.load();
+      if (shouldPlay) {
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {});
+        }
+      }
+    };
+
+    if (items && items.length) {
+      for (let j = 0; j < items.length; j += 1) {
+        const item = items[j];
+        item.addEventListener("click", () => {
+          const src = item.getAttribute("data-video-src");
+          const label = item.getAttribute("data-title") || item.textContent.trim();
+          setActiveItem(item);
+          setSource(src, label, true);
+        });
+      }
+
+      const defaultItem =
+        card.querySelector(".scenario-item.is-active") || items[0];
+      if (defaultItem) {
+        const src = defaultItem.getAttribute("data-video-src");
+        const label =
+          defaultItem.getAttribute("data-title") || defaultItem.textContent.trim();
+        setActiveItem(defaultItem);
+        setSource(src, label, false);
+      }
+    } else {
+      const defaultSrc = video.getAttribute("data-default-src");
+      if (defaultSrc) {
+        const fallbackTitle = title ? title.textContent : "";
+        setSource(defaultSrc, fallbackTitle, false);
+      }
+    }
+  }
+}
+
 function setVideoSource(src, title, shouldPlay) {
   if (!videoElement || !src) {
     return;
@@ -1286,7 +1884,10 @@ function setVideoSource(src, title, shouldPlay) {
     videoOverlay.classList.add("hidden");
   }
   if (shouldPlay) {
-    videoElement.play().catch(() => {});
+    const playPromise = videoElement.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
   }
 }
 
@@ -1294,15 +1895,120 @@ function setActiveVideoItem(activeItem) {
   if (!videoItems || videoItems.length === 0) {
     return;
   }
-  videoItems.forEach((item) => {
-    item.classList.toggle("is-active", item === activeItem);
-  });
+  for (let i = 0; i < videoItems.length; i += 1) {
+    const item = videoItems[i];
+    if (item === activeItem) {
+      item.classList.add("is-active");
+    } else {
+      item.classList.remove("is-active");
+    }
+  }
+}
+
+function getChatImageMaxSizeMb() {
+  if (!chatImageInput) {
+    return 3;
+  }
+  const raw = chatImageInput.getAttribute("data-max-size");
+  const value = raw ? parseFloat(raw) : 3;
+  if (!value) {
+    return 3;
+  }
+  return value;
+}
+
+function setChatImagePreviewEmpty(text) {
+  if (!chatImagePreview) {
+    return;
+  }
+  chatImagePreview.classList.add("is-empty");
+  if (chatImagePlaceholder) {
+    chatImagePlaceholder.textContent = text || "未选择图片";
+  }
+  if (chatImageThumb) {
+    chatImageThumb.removeAttribute("src");
+  }
+  if (chatImageName) {
+    chatImageName.textContent = "";
+  }
+}
+
+function setChatImagePreviewImage(dataUrl, name) {
+  if (!chatImagePreview) {
+    return;
+  }
+  chatImagePreview.classList.remove("is-empty");
+  if (chatImagePlaceholder) {
+    chatImagePlaceholder.textContent = "";
+  }
+  if (chatImageThumb) {
+    chatImageThumb.src = dataUrl;
+  }
+  if (chatImageName) {
+    chatImageName.textContent = name || "已选择图片";
+  }
+}
+
+function clearChatImage() {
+  presentationState.pendingImage = null;
+  if (chatImageInput) {
+    chatImageInput.value = "";
+  }
+  setChatImagePreviewEmpty("未选择图片");
+}
+
+function loadChatImage(file, maxSizeMb) {
+  if (!file) {
+    clearChatImage();
+    return;
+  }
+  if (!file.type || file.type.indexOf("image/") !== 0) {
+    setChatImagePreviewEmpty("仅支持图片格式");
+    return;
+  }
+  const limit = maxSizeMb * 1024 * 1024;
+  if (file.size > limit) {
+    setChatImagePreviewEmpty(`图片过大，请小于 ${maxSizeMb}MB`);
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = reader.result;
+    if (typeof result !== "string") {
+      setChatImagePreviewEmpty("图片读取失败");
+      return;
+    }
+    presentationState.pendingImage = {
+      dataUrl: result,
+      name: file.name || "上传图片",
+    };
+    setChatImagePreviewImage(result, file.name);
+  };
+  reader.onerror = () => {
+    setChatImagePreviewEmpty("图片读取失败");
+  };
+  reader.readAsDataURL(file);
 }
 
 function setupChat() {
   if (!chatForm || !chatLog || !chatInput || !chatStatus) {
     return;
   }
+
+  const maxImageSizeMb = getChatImageMaxSizeMb();
+  if (chatImageInput) {
+    chatImageInput.addEventListener("change", () => {
+      const file = chatImageInput.files && chatImageInput.files[0];
+      loadChatImage(file, maxImageSizeMb);
+    });
+  }
+  if (chatImageClear) {
+    chatImageClear.addEventListener("click", () => {
+      clearChatImage();
+    });
+  }
+  setChatImagePreviewEmpty("未选择图片");
 
   const greeting = "你好，我是古文化街数字人导览员。想了解哪些打卡点？";
   appendChatMessage("assistant", greeting);
@@ -1311,44 +2017,114 @@ function setupChat() {
   chatForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const text = chatInput.value.trim();
-    if (!text) {
+    const pendingImage =
+      presentationState.pendingImage && presentationState.pendingImage.dataUrl
+        ? presentationState.pendingImage.dataUrl
+        : null;
+    if (!text && !pendingImage) {
       return;
     }
-    appendChatMessage("user", text);
-    presentationState.messages.push({ role: "user", content: text });
+    appendChatMessage("user", text, pendingImage);
+    presentationState.messages.push({
+      role: "user",
+      content: text,
+      image: pendingImage,
+    });
     chatInput.value = "";
+    clearChatImage();
     chatInput.focus();
     setChatStatus("busy");
     chatInput.disabled = true;
+    if (chatImageInput) {
+      chatImageInput.disabled = true;
+    }
+    if (chatImageClear) {
+      chatImageClear.disabled = true;
+    }
 
     const thinking = appendChatMessage("assistant", "正在思考...");
     try {
-      const reply = await requestChatReply();
-      thinking.textContent = reply || "暂时无法生成回答。";
-      presentationState.messages.push({ role: "assistant", content: reply });
+      let replyText = "";
+      let hasStreamed = false;
+      const streamed = await requestChatReplyStream((delta, fullText) => {
+        if (!hasStreamed) {
+          hasStreamed = true;
+          setChatStatus("speaking");
+        }
+        replyText = fullText;
+        thinking.textContent = fullText;
+      });
+      if (!hasStreamed) {
+        replyText = streamed;
+        if (replyText) {
+          setChatStatus("speaking");
+          thinking.textContent = replyText;
+        }
+      }
+      if (!replyText) {
+        replyText = "暂时无法生成回答。";
+        thinking.textContent = replyText;
+      }
+      presentationState.messages.push({ role: "assistant", content: replyText });
       setChatStatus("online");
-      triggerAvatarSpeak();
     } catch (error) {
-      thinking.textContent = "当前无法连接模型，请稍后再试。";
-      setChatStatus("offline");
+      console.warn("Streaming chat failed, fallback to non-stream.", error);
+      try {
+        const reply = await requestChatReply();
+        const replyText = reply || "暂时无法生成回答。";
+        presentationState.messages.push({ role: "assistant", content: replyText });
+        setChatStatus("speaking");
+        await typeAssistantReply(thinking, replyText);
+        setChatStatus("online");
+      } catch (fallbackError) {
+        console.warn("Fallback chat failed.", fallbackError);
+        thinking.textContent = "当前无法连接模型，请稍后再试。";
+        setChatStatus("offline");
+      }
     } finally {
       chatInput.disabled = false;
+      if (chatImageInput) {
+        chatImageInput.disabled = false;
+      }
+      if (chatImageClear) {
+        chatImageClear.disabled = false;
+      }
       chatInput.focus();
       scrollChatToBottom();
     }
   });
 }
 
-function appendChatMessage(role, text) {
+function appendChatMessage(role, text, imageUrl) {
   const message = document.createElement("div");
   message.className = `message ${role}`;
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = text;
+  let textNode = null;
+  const hasText = text && text.trim().length > 0;
+  const needsPlaceholder = role === "assistant" && !hasText;
+  if (hasText || needsPlaceholder) {
+    textNode = document.createElement("div");
+    textNode.className = "bubble-text";
+    textNode.textContent = hasText ? text : "";
+    bubble.appendChild(textNode);
+  } else if (imageUrl) {
+    textNode = document.createElement("div");
+    textNode.className = "bubble-text";
+    textNode.textContent = "已发送图片";
+    bubble.appendChild(textNode);
+  }
+  if (imageUrl) {
+    const img = document.createElement("img");
+    img.className = "bubble-image";
+    img.src = imageUrl;
+    img.alt = "上传图片";
+    bubble.appendChild(img);
+  }
   message.appendChild(bubble);
   chatLog.appendChild(message);
   scrollChatToBottom();
-  return bubble;
+  return textNode || bubble;
 }
 
 function scrollChatToBottom() {
@@ -1359,11 +2135,14 @@ function setChatStatus(state) {
   if (!chatStatus) {
     return;
   }
-  chatStatus.classList.remove("is-busy", "is-offline");
+  chatStatus.classList.remove("is-busy", "is-offline", "is-speaking");
   setAvatarState(state);
   if (state === "busy") {
     chatStatus.textContent = "思考中";
     chatStatus.classList.add("is-busy");
+  } else if (state === "speaking") {
+    chatStatus.textContent = "讲解中";
+    chatStatus.classList.add("is-speaking");
   } else if (state === "offline") {
     chatStatus.textContent = "离线";
     chatStatus.classList.add("is-offline");
@@ -1376,8 +2155,16 @@ function setAvatarState(state) {
   if (!avatar) {
     return;
   }
-  avatar.classList.toggle("is-speaking", state === "busy");
-  avatar.classList.toggle("is-offline", state === "offline");
+  if (state === "speaking") {
+    avatar.classList.add("is-speaking");
+  } else {
+    avatar.classList.remove("is-speaking");
+  }
+  if (state === "offline") {
+    avatar.classList.add("is-offline");
+  } else {
+    avatar.classList.remove("is-offline");
+  }
 }
 
 function triggerAvatarSpeak(duration = 1200) {
@@ -1393,9 +2180,70 @@ function triggerAvatarSpeak(duration = 1200) {
   }, duration);
 }
 
+function typeAssistantReply(target, text) {
+  if (!target) {
+    return Promise.resolve();
+  }
+  const fullText = text || "";
+  if (!fullText.trim()) {
+    target.textContent = fullText;
+    return Promise.resolve();
+  }
+
+  target.textContent = "";
+  const maxDuration = 3600;
+  const minInterval = 14;
+  const maxInterval = 38;
+  const interval = Math.max(
+    minInterval,
+    Math.min(maxInterval, Math.floor(maxDuration / Math.max(fullText.length, 18)))
+  );
+
+  return new Promise((resolve) => {
+    let index = 0;
+    const step = () => {
+      index += 1;
+      target.textContent = fullText.slice(0, index);
+      if (index % 8 === 0) {
+        scrollChatToBottom();
+      }
+      if (index < fullText.length) {
+        window.setTimeout(step, interval);
+      } else {
+        scrollChatToBottom();
+        resolve();
+      }
+    };
+    step();
+  });
+}
+
+function buildChatPayloadMessages() {
+  const history = presentationState.messages.slice(-10);
+  const result = [];
+  let imageIncluded = false;
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const message = history[i];
+    let image = message.image || null;
+    if (image) {
+      if (imageIncluded) {
+        image = null;
+      } else {
+        imageIncluded = true;
+      }
+    }
+    result.unshift({
+      role: message.role,
+      content: message.content || "",
+      image: image,
+    });
+  }
+  return result;
+}
+
 async function requestChatReply() {
   const payload = {
-    messages: presentationState.messages.slice(-10),
+    messages: buildChatPayloadMessages(),
     temperature: 0.7,
     max_tokens: 220,
   };
@@ -1409,6 +2257,100 @@ async function requestChatReply() {
   }
   const data = await response.json();
   return data.content || "";
+}
+
+async function requestChatReplyStream(onToken) {
+  const payload = {
+    messages: buildChatPayloadMessages(),
+    temperature: 0.7,
+    max_tokens: 220,
+  };
+
+  const response = await fetch("/api/chat/stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error("stream unavailable");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let fullText = "";
+
+  const handleData = (data) => {
+    if (!data) {
+      return false;
+    }
+    if (data === "[DONE]") {
+      return true;
+    }
+    let delta = "";
+    try {
+      const payloadData = JSON.parse(data);
+      if (payloadData && payloadData.error) {
+        throw new Error(payloadData.error);
+      }
+      const choice = payloadData.choices && payloadData.choices[0];
+      if (choice && choice.delta && typeof choice.delta.content === "string") {
+        delta = choice.delta.content;
+      } else if (
+        choice &&
+        choice.message &&
+        typeof choice.message.content === "string"
+      ) {
+        delta = choice.message.content;
+      } else if (typeof payloadData.content === "string") {
+        delta = payloadData.content;
+      }
+    } catch (error) {
+      if (data && data !== "[DONE]") {
+        delta = data;
+      }
+    }
+    if (delta) {
+      fullText += delta;
+      if (typeof onToken === "function") {
+        onToken(delta, fullText);
+      }
+    }
+    return false;
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i].trim();
+      if (!line || !line.startsWith("data:")) {
+        continue;
+      }
+      const data = line.slice(5).trim();
+      if (handleData(data)) {
+        return fullText;
+      }
+    }
+  }
+
+  const tail = buffer.trim();
+  if (tail.startsWith("data:")) {
+    const data = tail.slice(5).trim();
+    if (handleData(data)) {
+      return fullText;
+    }
+  }
+
+  return fullText;
 }
 
 function setupPhotoComposer() {
@@ -1445,14 +2387,75 @@ function setupPhotoComposer() {
     photoTheme.addEventListener("change", () => renderPhoto(ctx));
   }
 
-  if (photoButton) {
-    photoButton.addEventListener("click", () => renderPhoto(ctx));
-  }
-
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => renderPhoto(ctx));
   } else {
     renderPhoto(ctx);
+  }
+}
+
+function setupPhotoVideoList() {
+  if (!photoVideoElement) {
+    return;
+  }
+
+  if (!photoVideoItems || photoVideoItems.length === 0) {
+    const defaultSrc = photoVideoElement.dataset.defaultSrc;
+    if (defaultSrc) {
+      const fallbackTitle = photoVideoTitle ? photoVideoTitle.textContent : "";
+      setPhotoVideoSource(defaultSrc, fallbackTitle, false);
+    }
+    return;
+  }
+
+  for (let i = 0; i < photoVideoItems.length; i += 1) {
+    const item = photoVideoItems[i];
+    item.addEventListener("click", () => {
+      const src = item.getAttribute("data-photo-video-src");
+      const title = item.getAttribute("data-title") || item.textContent.trim();
+      setActivePhotoVideoItem(item);
+      setPhotoVideoSource(src, title, true);
+    });
+  }
+
+  const defaultItem =
+    document.querySelector(".photo-video-item.is-active") || photoVideoItems[0];
+  if (defaultItem) {
+    const src = defaultItem.getAttribute("data-photo-video-src");
+    const title = defaultItem.getAttribute("data-title") || defaultItem.textContent.trim();
+    setActivePhotoVideoItem(defaultItem);
+    setPhotoVideoSource(src, title, false);
+  }
+}
+
+function setPhotoVideoSource(src, title, shouldPlay) {
+  if (!photoVideoElement || !src) {
+    return;
+  }
+  if (photoVideoTitle && title) {
+    photoVideoTitle.textContent = title;
+  }
+  photoVideoElement.src = src;
+  photoVideoElement.load();
+  if (shouldPlay) {
+    const playPromise = photoVideoElement.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  }
+}
+
+function setActivePhotoVideoItem(activeItem) {
+  if (!photoVideoItems || photoVideoItems.length === 0) {
+    return;
+  }
+  for (let i = 0; i < photoVideoItems.length; i += 1) {
+    const item = photoVideoItems[i];
+    if (item === activeItem) {
+      item.classList.add("is-active");
+    } else {
+      item.classList.remove("is-active");
+    }
   }
 }
 

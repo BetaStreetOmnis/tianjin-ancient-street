@@ -1931,6 +1931,23 @@ body {
   margin-bottom: 12px;
 }
 
+.case-intro {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(124, 60, 44, 0.18);
+  box-shadow: 0 16px 30px -26px var(--shadow);
+  display: grid;
+  gap: 8px;
+}
+
+.case-intro p {
+  margin: 0;
+  font-size: 12px;
+  color: #5a4335;
+}
+
 .case-app-grid {
   grid-template-columns: 1fr;
   margin-bottom: 12px;
@@ -1959,22 +1976,19 @@ body {
   gap: 8px;
 }
 
-.case-links a {
+.case-links span {
   margin-top: 0;
   padding: 4px 10px;
   border-radius: 999px;
   background: rgba(194, 92, 58, 0.12);
   color: var(--accent-dark);
   font-weight: 600;
+  font-size: 12px;
 }
 
-.case-links a.is-video {
+.case-links span.is-video {
   background: rgba(47, 111, 99, 0.14);
   color: var(--jade);
-}
-
-.case-links a:hover {
-  color: var(--accent);
 }
 
 .case-lines {

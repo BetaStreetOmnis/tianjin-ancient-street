@@ -2206,8 +2206,9 @@ body {
 }
 
 .photo-grid.compact {
-  grid-template-columns: 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 24px;
+  align-items: center;
 }
 
 .photo-grid.compact .photo-stage {
@@ -2295,5 +2296,9 @@ body {
 
   .scenario-list {
     max-height: 160px;
+  }
+
+  .photo-grid.compact {
+    grid-template-columns: 1fr;
   }
 }

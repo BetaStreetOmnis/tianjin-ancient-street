@@ -638,7 +638,6 @@ async function init() {
     renderOnce();
   });
   safeInvoke(setupVisibilityTracking, "visibility tracking");
-  safeInvoke(setupPhotoGenerator, "photo generator");
 
   onResize();
   requestAnimationFrame(onResize);
@@ -1640,6 +1639,7 @@ function initPresentation() {
   setupVideoUpload();
   setupScenarioVideoLists();
   setupChat();
+  safeInvoke(setupPhotoGenerator, "photo generator");
   setupPhotoComposer();
   setupPhotoVideoList();
 }

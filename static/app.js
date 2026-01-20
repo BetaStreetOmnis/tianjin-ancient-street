@@ -2620,7 +2620,8 @@ function drawStageBackground(ctx, width, height) {
   ctx.fillStyle = "#caa05d";
   ctx.fillRect(width * 0.28, height * 0.06, width * 0.44, height * 0.08);
   ctx.fillStyle = "#f4e3b2";
-  ctx.font = 'bold 32px \"ZCOOL XiaoWei\", serif';
+  const signFontSize = Math.max(28, Math.min(52, Math.round(height * 0.065)));
+  ctx.font = `bold ${signFontSize}px "ZCOOL XiaoWei", serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("德云社", width * 0.5, height * 0.1);

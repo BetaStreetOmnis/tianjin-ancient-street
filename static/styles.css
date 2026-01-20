@@ -2206,7 +2206,7 @@ body {
 }
 
 .photo-grid.compact {
-  grid-template-columns: minmax(220px, 0.9fr) minmax(320px, 1.1fr);
+  grid-template-columns: minmax(240px, 0.8fr) minmax(360px, 1.2fr);
   gap: 24px;
   align-items: center;
 }
@@ -2227,8 +2227,10 @@ body {
   max-height: 180px;
 }
 
-.photo-frame {
-  height: 260px;
+@supports not (aspect-ratio: 1 / 1) {
+  .photo-frame {
+    height: 260px;
+  }
 }
 
 .photo-frame canvas {

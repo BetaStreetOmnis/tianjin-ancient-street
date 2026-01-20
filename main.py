@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import requests
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,8 @@ from pydantic import BaseModel, Field
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 GENERATED_DIR = STATIC_DIR / "generated"
+
+load_dotenv(BASE_DIR / ".env")
 
 app = FastAPI(title="Tianjin Ancient Culture Street 3D")
 

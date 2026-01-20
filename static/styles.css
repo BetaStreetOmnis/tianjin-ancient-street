@@ -246,10 +246,123 @@ p {
   z-index: 0;
 }
 
+#scene.map-surface {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+  padding: 18px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
 #scene canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.map-banner {
+  display: grid;
+  gap: 6px;
+}
+
+.map-banner h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.map-banner p {
+  margin: 0;
+  font-size: 12px;
+  color: #5a4335;
+}
+
+.map-svg {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(238, 222, 202, 0.8));
+  border-radius: 18px;
+  border: 1px solid rgba(124, 60, 44, 0.2);
+}
+
+.map-street-outline {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 18;
+  stroke-linecap: round;
+}
+
+.map-street {
+  fill: none;
+  stroke: url(#streetGlow);
+  stroke-width: 12;
+  stroke-linecap: round;
+}
+
+.map-river {
+  fill: none;
+  stroke: url(#riverFlow);
+  stroke-width: 22;
+  stroke-linecap: round;
+}
+
+.map-block {
+  fill: rgba(247, 234, 219, 0.85);
+  stroke: rgba(124, 60, 44, 0.25);
+  stroke-width: 1;
+}
+
+.map-node circle {
+  stroke: #fff7ef;
+  stroke-width: 2;
+}
+
+.map-node text {
+  font-size: 12px;
+  fill: #3a261b;
+  text-anchor: middle;
+  font-weight: 600;
+}
+
+.map-node.gate circle {
+  fill: var(--gold);
+}
+
+.map-node.temple circle {
+  fill: #c46a3a;
+}
+
+.map-node.tower circle {
+  fill: var(--accent-dark);
+}
+
+.map-node.stage circle {
+  fill: #a85b3d;
+}
+
+.map-node.market circle {
+  fill: var(--jade);
+}
+
+.map-node.craft circle {
+  fill: #d99b4b;
+}
+
+.map-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  font-size: 12px;
+  color: #4b372b;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .scene-fallback {
@@ -639,15 +752,25 @@ ul {
 .video-shell {
   position: relative;
   border-radius: 24px;
-  border: 1px solid rgba(124, 60, 44, 0.2);
+  border: 2px solid rgba(124, 60, 44, 0.35);
+  padding: 10px;
   overflow: hidden;
-  background: #20160f;
+  background: linear-gradient(135deg, rgba(248, 237, 219, 0.9), rgba(226, 199, 170, 0.9));
   box-shadow: 0 30px 60px -40px var(--shadow);
+  cursor: zoom-in;
 }
 
 .video-shell.dragover {
   outline: 2px dashed rgba(247, 214, 160, 0.8);
   outline-offset: -6px;
+}
+
+.video-frame {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #20160f;
+  border: 1px solid rgba(124, 60, 44, 0.25);
 }
 
 .video-shell video {
@@ -1698,9 +1821,14 @@ body {
   min-height: 520px;
 }
 
-.map-card #scene {
+.map-card #scene:not(.map-surface) {
   position: absolute;
   inset: 0;
+}
+
+.map-card #scene.map-surface {
+  position: relative;
+  inset: auto;
 }
 
 .map-card #scene canvas {

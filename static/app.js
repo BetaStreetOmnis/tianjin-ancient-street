@@ -84,6 +84,8 @@ if (!container) {
   throw new Error("Scene container not found.");
 }
 
+const mapOnly = container.getAttribute("data-map-only") === "true";
+
 let scene = null;
 let camera = null;
 let renderer = null;
@@ -105,64 +107,71 @@ const palette = {
   stage: "#a65a3b",
 };
 
-try {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color("#f1e6d3");
-  scene.fog = new THREE.Fog("#e9dcc6", 50, 180);
+if (!mapOnly) {
+  try {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color("#f1e6d3");
+    scene.fog = new THREE.Fog("#e9dcc6", 50, 180);
 
-  const initialWidth = Math.max(container.clientWidth, 1);
-  const initialHeight = Math.max(container.clientHeight, 1);
+    const initialWidth = Math.max(container.clientWidth, 1);
+    const initialHeight = Math.max(container.clientHeight, 1);
 
-  camera = new THREE.PerspectiveCamera(45, initialWidth / initialHeight, 0.1, 260);
-  camera.position.set(48, 50, 70);
+    camera = new THREE.PerspectiveCamera(
+      45,
+      initialWidth / initialHeight,
+      0.1,
+      260
+    );
+    camera.position.set(48, 50, 70);
 
-  renderer = new THREE.WebGLRenderer({
-    antialias: quality.antialias,
-    powerPreference: quality.powerPreference,
-    alpha: false,
-    stencil: false,
-    precision: liteMode ? "lowp" : "highp",
-  });
-  renderer.setPixelRatio(quality.pixelRatio);
-  renderer.setSize(initialWidth, initialHeight);
-  renderer.shadowMap.enabled = quality.shadows;
-  renderer.shadowMap.type = quality.shadowMapType;
-  renderer.shadowMap.autoUpdate = quality.shadowAutoUpdate;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  container.appendChild(renderer.domElement);
+    renderer = new THREE.WebGLRenderer({
+      antialias: quality.antialias,
+      powerPreference: quality.powerPreference,
+      alpha: false,
+      stencil: false,
+      precision: liteMode ? "lowp" : "highp",
+    });
+    renderer.setPixelRatio(quality.pixelRatio);
+    renderer.setSize(initialWidth, initialHeight);
+    renderer.shadowMap.enabled = quality.shadows;
+    renderer.shadowMap.type = quality.shadowMapType;
+    renderer.shadowMap.autoUpdate = quality.shadowAutoUpdate;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
 
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.07;
-  controls.enablePan = true;
-  controls.minDistance = 28;
-  controls.maxDistance = 150;
-  controls.minPolarAngle = Math.PI / 6;
-  controls.maxPolarAngle = Math.PI / 2.1;
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.enablePan = true;
+    controls.minDistance = 28;
+    controls.maxDistance = 150;
+    controls.minPolarAngle = Math.PI / 6;
+    controls.maxPolarAngle = Math.PI / 2.1;
 
-  world = new THREE.Group();
-  scene.add(world);
+    world = new THREE.Group();
+    scene.add(world);
 
-world.add(createLights());
-world.add(createGround());
-world.add(createStreet());
-world.add(createBuildings());
+    world.add(createLights());
+    world.add(createGround());
+    world.add(createStreet());
+    world.add(createBuildings());
 
-if (!liteMode) {
-  river = createRiver();
-  world.add(river);
-  world.add(createBridge());
-  world.add(createTrees());
-  lanterns = createLanterns();
-  world.add(lanterns.group);
-}
+    if (!liteMode) {
+      river = createRiver();
+      world.add(river);
+      world.add(createBridge());
+      world.add(createTrees());
+      lanterns = createLanterns();
+      world.add(lanterns.group);
+    }
 
-  threeReady = true;
-} catch (error) {
-  console.error("3D init failed:", error);
-  renderFallbackMap("3D 无法加载，已切换为平面示意。");
+    threeReady = true;
+  } catch (error) {
+    console.error("3D init failed:", error);
+    renderFallbackMap("3D 无法加载，已切换为平面示意。");
+  }
 }
 
 const markers = [];
@@ -1195,6 +1204,60 @@ function setupSceneResizer() {
   }, 240);
 }
 
+function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    document.msFullscreenElement
+  );
+}
+
+function requestFullscreen(element) {
+  if (!element) {
+    return;
+  }
+  const request =
+    element.requestFullscreen ||
+    element.webkitRequestFullscreen ||
+    element.mozRequestFullScreen ||
+    element.msRequestFullscreen;
+  if (request) {
+    request.call(element);
+  }
+}
+
+function exitFullscreen() {
+  const exit =
+    document.exitFullscreen ||
+    document.webkitExitFullscreen ||
+    document.mozCancelFullScreen ||
+    document.msExitFullscreen;
+  if (exit) {
+    exit.call(document);
+  }
+}
+
+function setupVideoFullscreen(video, shell) {
+  if (!video) {
+    return;
+  }
+
+  const toggle = () => {
+    const current = getFullscreenElement();
+    if (current && current === video) {
+      exitFullscreen();
+    } else {
+      requestFullscreen(video);
+    }
+  };
+
+  video.addEventListener("click", toggle);
+  if (shell) {
+    shell.addEventListener("dblclick", toggle);
+  }
+}
+
 function setupVideoPlayer() {
   const video = document.getElementById("promo-video");
   const overlay = document.getElementById("video-overlay");
@@ -1204,6 +1267,8 @@ function setupVideoPlayer() {
   if (!video) {
     return;
   }
+
+  setupVideoFullscreen(video, shell);
 
   const setOverlayVisible = (visible) => {
     if (!overlay) {
@@ -1735,6 +1800,8 @@ function setupVideoUpload() {
   if (!videoElement || !videoOverlay || !videoShell) {
     return;
   }
+
+  setupVideoFullscreen(videoElement, videoShell);
 
   const showOverlay = (text) => {
     if (text) {

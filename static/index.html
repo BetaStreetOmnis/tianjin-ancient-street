@@ -6,14 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1"
     />
-    <title>天津古文化街 · 数字文旅 3D 展示</title>
+    <title>天津古文化街 · 数字文旅地图展示</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=ZCOOL+XiaoWei&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/styles.css?v=21" />
+    <link rel="stylesheet" href="/static/styles.css?v=23" />
   </head>
   <body>
     <div id="app" class="layout">
@@ -24,17 +24,17 @@
           </button>
           <div class="topbar-title">
             <span class="kicker">天津古文化街 · 数字文旅方案</span>
-            <span class="topbar-name">津门故里 · 智慧文旅 3D 展示</span>
+            <span class="topbar-name">津门故里 · 智慧文旅地图展示</span>
           </div>
         </div>
         <div class="topbar-right">
-          <span class="status-pill">3D LIVE</span>
-          <span class="status-meta">街区视图</span>
+          <span class="status-pill">MAP</span>
+          <span class="status-meta">街区地图</span>
         </div>
       </header>
 
       <nav class="subnav" id="panel-tabs">
-        <button class="nav-item is-active" data-panel="street">街区3D</button>
+        <button class="nav-item is-active" data-panel="street">街区地图</button>
         <button class="nav-item" data-panel="ai">其他景区AI应用</button>
         <button class="nav-item" data-panel="video">视频库</button>
         <button class="nav-item" data-panel="digital-human">数字人</button>
@@ -46,8 +46,8 @@
           <div class="summary-kicker">天津古文化街 · 数字文旅展示</div>
           <h1>津门故里</h1>
           <p>
-            将古文化街的地标、文化与服务能力浓缩为一张可交互 3D
-            地图，可切换其他景区AI应用、视频展示与 AI 旅拍体验。
+            将古文化街的地标、文化与服务能力浓缩为一张景区导览地图，
+            可切换其他景区 AI 应用、视频展示与 AI 旅拍体验。
           </p>
           <div class="metric-grid">
             <div class="metric">
@@ -64,47 +64,107 @@
             </div>
           </div>
           <div class="summary-tags">
-            <span>3D 空间叙事</span>
+            <span>景区地图</span>
             <span>数字人导览</span>
             <span>AI 旅拍</span>
           </div>
         </section>
 
         <section class="map-card">
-          <div id="scene" aria-label="3D map canvas"></div>
-          <div id="hud">
-            <div class="panel brand">
-              <div class="label">3D 街区</div>
-              <h3>古文化街空间模型</h3>
-              <p>拖拽旋转、滚轮缩放，点击地标聚焦。</p>
+          <div
+            id="scene"
+            class="map-surface"
+            data-map-only="true"
+            aria-label="景区地图"
+          >
+            <div class="map-banner">
+              <div class="label">景区地图</div>
+              <h3>天津古文化街步行导览图</h3>
+              <p>主轴贯通牌坊、天后宫、曲艺戏台与鼓楼。</p>
             </div>
-            <div class="panel legend">
-              <h3>图例</h3>
-              <div class="legend-grid">
+            <svg
+              class="map-svg"
+              viewBox="0 0 600 420"
+              role="img"
+              aria-label="天津古文化街导览地图"
+            >
+              <defs>
+                <linearGradient id="streetGlow" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f8e7c9" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#d9b38f" stop-opacity="0.9" />
+                </linearGradient>
+                <linearGradient id="riverFlow" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#2b6f87" stop-opacity="0.2" />
+                  <stop offset="100%" stop-color="#2b6f87" stop-opacity="0.5" />
+                </linearGradient>
+              </defs>
+              <path
+                class="map-river"
+                d="M110 40 C160 120 170 250 120 360"
+              />
+              <path
+                class="map-street-outline"
+                d="M300 380 C290 320 310 260 300 200 C292 150 322 100 300 40"
+              />
+              <path
+                class="map-street"
+                d="M300 380 C290 320 310 260 300 200 C292 150 322 100 300 40"
+              />
+              <rect class="map-block" x="210" y="210" width="78" height="48" rx="12" />
+              <rect class="map-block" x="340" y="210" width="84" height="48" rx="12" />
+              <rect class="map-block" x="220" y="130" width="74" height="42" rx="12" />
+              <rect class="map-block" x="350" y="130" width="80" height="42" rx="12" />
+              <g class="map-node gate" transform="translate(300 360)">
+                <circle r="10" />
+                <text x="0" y="26">牌坊</text>
+              </g>
+              <g class="map-node craft" transform="translate(240 240)">
+                <circle r="8" />
+                <text x="-24" y="24">民俗工艺馆</text>
+              </g>
+              <g class="map-node temple" transform="translate(240 160)">
+                <circle r="8" />
+                <text x="-18" y="24">天后宫</text>
+              </g>
+              <g class="map-node market" transform="translate(360 240)">
+                <circle r="8" />
+                <text x="18" y="24">津味小吃街</text>
+              </g>
+              <g class="map-node stage" transform="translate(360 160)">
+                <circle r="8" />
+                <text x="18" y="24">曲艺戏台</text>
+              </g>
+              <g class="map-node tower" transform="translate(300 70)">
+                <circle r="10" />
+                <text x="0" y="-16">鼓楼</text>
+              </g>
+            </svg>
+            <div class="map-legend">
+              <div class="legend-item">
                 <span class="dot gate"></span>
-                <span class="legend-label">牌坊</span>
+                <span>牌坊</span>
+              </div>
+              <div class="legend-item">
                 <span class="dot temple"></span>
-                <span class="legend-label">古庙</span>
+                <span>古庙</span>
+              </div>
+              <div class="legend-item">
                 <span class="dot tower"></span>
-                <span class="legend-label">鼓楼</span>
+                <span>鼓楼</span>
+              </div>
+              <div class="legend-item">
                 <span class="dot stage"></span>
-                <span class="legend-label">戏台</span>
+                <span>戏台</span>
+              </div>
+              <div class="legend-item">
                 <span class="dot market"></span>
-                <span class="legend-label">市集</span>
+                <span>市集</span>
+              </div>
+              <div class="legend-item">
                 <span class="dot craft"></span>
-                <span class="legend-label">工艺</span>
+                <span>工艺</span>
               </div>
             </div>
-            <div class="panel info" id="info-panel">
-              <h3>当前焦点</h3>
-              <div class="info-name">悬停或点击地标</div>
-              <div class="info-desc">查看对应位置的文化与服务说明。</div>
-            </div>
-          </div>
-          <div id="tooltip" role="status" aria-hidden="true"></div>
-          <div id="loading">
-            <div class="spinner"></div>
-            <div>正在生成街区...</div>
           </div>
         </section>
 
@@ -461,15 +521,17 @@
                   产品介绍-星魔镜AI拍照一体机
                 </div>
                 <div class="video-shell" id="video-shell">
-                  <video
-                    id="promo-video"
-                    controls
-                    playsinline
-                    preload="metadata"
-                    data-default-src="/static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4"
-                  ></video>
-                  <div class="video-overlay" id="video-overlay">
-                    点击列表播放或拖入视频
+                  <div class="video-frame">
+                    <video
+                      id="promo-video"
+                      controls
+                      playsinline
+                      preload="metadata"
+                      data-default-src="/static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4"
+                    ></video>
+                    <div class="video-overlay" id="video-overlay">
+                      点击列表播放或拖入视频
+                    </div>
                   </div>
                 </div>
                 <div class="video-actions">
@@ -604,123 +666,12 @@
                   <span>相声马甲</span>
                   <span>AI 旅拍</span>
                 </div>
-                <div class="photo-video">
-                  <div class="photo-video-head">
-                    魔镜拍照一体机视频
-                    <span class="photo-video-sub">旅拍效果展示</span>
-                  </div>
-                  <div class="photo-video-content">
-                    <div class="photo-video-list">
-                      <button
-                        class="photo-video-item is-active"
-                        data-photo-video-src="/static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4"
-                        data-title="产品介绍-星魔镜AI拍照一体机"
-                      >
-                        产品介绍-星魔镜AI拍照一体机
-                      </button>
-                      <button
-                        class="photo-video-item"
-                        data-photo-video-src="/static/media/robot-videos/dunhuang-star-mirror-ai-photo-booth.mp4"
-                        data-title="敦煌-星魔镜AI拍照一体机"
-                      >
-                        敦煌-星魔镜AI拍照一体机
-                      </button>
-                      <button
-                        class="photo-video-item"
-                        data-photo-video-src="/static/media/robot-videos/sailimu-lake-star-mirror-ai-photo-booth.mp4"
-                        data-title="赛里木湖-星魔镜AI拍照一体机"
-                      >
-                        赛里木湖-星魔镜AI拍照一体机
-                      </button>
-                    </div>
-                    <div class="photo-video-player">
-                      <div class="photo-video-title" id="photo-video-title">
-                        产品介绍-星魔镜AI拍照一体机
-                      </div>
-                      <video
-                        id="photo-video"
-                        controls
-                        playsinline
-                        preload="none"
-                        data-default-src="/static/media/robot-videos/product-intro-star-mirror-ai-photo-booth.mp4"
-                      ></video>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </section>
       </main>
     </div>
-    <script>
-      (function () {
-        var loading = document.getElementById("loading");
-        var scene = document.getElementById("scene");
-        function showMessage(text) {
-          if (!loading) {
-            return;
-          }
-          loading.innerHTML = "<div class=\"spinner\"></div><div>" + text + "</div>";
-        }
-
-        function renderFallback(message) {
-          if (!scene) {
-            return;
-          }
-          if (scene.querySelector("canvas") || scene.querySelector(".scene-fallback")) {
-            return;
-          }
-          if (loading && loading.classList) {
-            loading.classList.add("hidden");
-          }
-          var wrapper = document.createElement("div");
-          wrapper.className = "scene-fallback";
-          var header = document.createElement("div");
-          header.className = "fallback-header";
-          header.innerHTML = "<strong>街区平面示意</strong><span>" + (message || "已启用超简模式") + "</span>";
-          var map = document.createElement("div");
-          map.className = "fallback-map";
-          map.innerHTML = ""
-            + "<span class=\"fallback-dot gate\" style=\"left:50%; top:18%;\">牌坊</span>"
-            + "<span class=\"fallback-dot craft\" style=\"left:32%; top:38%;\">民俗馆</span>"
-            + "<span class=\"fallback-dot temple\" style=\"left:30%; top:52%;\">天后宫</span>"
-            + "<span class=\"fallback-dot market\" style=\"left:66%; top:50%;\">津味街</span>"
-            + "<span class=\"fallback-dot stage\" style=\"left:64%; top:66%;\">曲艺台</span>"
-            + "<span class=\"fallback-dot tower\" style=\"left:52%; top:82%;\">鼓楼</span>";
-          wrapper.appendChild(header);
-          wrapper.appendChild(map);
-          scene.appendChild(wrapper);
-        }
-
-        var supportsModule = "noModule" in document.createElement("script");
-        if (!supportsModule) {
-          showMessage("浏览器不支持模块，请用 Chrome 打开查看 3D 场景。");
-          renderFallback("浏览器不支持模块");
-          return;
-        }
-
-        var canvas = document.createElement("canvas");
-        var gl =
-          canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-        if (!gl) {
-          showMessage("当前浏览器未启用 WebGL，无法展示 3D 场景。");
-          renderFallback("WebGL 不可用");
-        }
-
-        setTimeout(function () {
-          if (!loading) {
-            return;
-          }
-          if (loading.className.indexOf("hidden") === -1) {
-            showMessage("3D 场景加载超时，请刷新或更换浏览器。");
-            if (!window.__appReady) {
-              renderFallback("3D 加载超时");
-            }
-          }
-        }, 5000);
-      })();
-    </script>
-    <script type="module" src="/static/app.js?v=26"></script>
+    <script type="module" src="/static/app.js?v=28"></script>
   </body>
 </html>
